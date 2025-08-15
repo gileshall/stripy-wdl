@@ -1,0 +1,10 @@
+{
+  "STRipyPipeline.input_bam": "/path/to/your/sample.bam",
+  "STRipyPipeline.genome_build": "hg38",
+  "STRipyPipeline.reference_fasta": "/path/to/your/hg38.fa",
+  "STRipyPipeline.loci": "HTT,ATXN3,AFF2",
+  "STRipyPipeline.output_prefix": "sample_001",
+  "STRipyPipeline.docker_image": "stripy-pipeline:latest",
+  "STRipyPipeline.memory_gb": 16,
+  "STRipyPipeline.cpu": 4
+}
