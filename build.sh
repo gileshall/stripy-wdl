@@ -25,6 +25,10 @@ while [[ $# -gt 0 ]]; do
             BUILD_ARGS="$BUILD_ARGS --build-arg EXPANSIONHUNTER_VERSION=$2"
             shift 2
             ;;
+        --reviewer-version)
+            BUILD_ARGS="$BUILD_ARGS --build-arg REVIEWER_VERSION=$2"
+            shift 2
+            ;;
         -h|--help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
@@ -32,6 +36,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --no-cache                 Build without using cache"
             echo "  --tag TAG                  Docker image tag (default: stripy-pipeline:latest)"
             echo "  --expansionhunter-version  ExpansionHunter version (default: 5.0.0)"
+            echo "  --reviewer-version         REViewer version (default: 0.2.7)"
             echo "  -h, --help                 Show this help message"
             echo ""
             echo "Examples:"
@@ -39,6 +44,7 @@ while [[ $# -gt 0 ]]; do
             echo "  $0 --no-cache                         # Build without cache"
             echo "  $0 --tag my-stripy:v1.0              # Custom tag"
             echo "  $0 --expansionhunter-version 4.0.0   # Custom ExpansionHunter version"
+            echo "  $0 --reviewer-version 0.2.6            # Custom REViewer version"
             exit 0
             ;;
         *)
@@ -76,6 +82,7 @@ echo "Starting Docker build..."
 docker build \
     $NO_CACHE \
     $BUILD_ARGS \
+    --platform linux/amd64 \
     -t "$TAG" \
     -f Dockerfile \
     .

@@ -1,5 +1,6 @@
 # Simple Dockerfile for STRipy-pipeline
-FROM ubuntu:22.04
+# Force x86_64 platform for compatibility with genomics tools
+FROM --platform=linux/amd64 ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
@@ -11,6 +12,9 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     git \
     wget \
+    samtools \
+    libcurl4 \
+    libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install ExpansionHunter (core dependency for STR analysis)
@@ -19,6 +23,13 @@ RUN wget https://github.com/Illumina/ExpansionHunter/releases/download/v${EXPANS
     && tar -xzf ExpansionHunter-v${EXPANSIONHUNTER_VERSION}-linux_x86_64.tar.gz \
     && mv ExpansionHunter-v${EXPANSIONHUNTER_VERSION}-linux_x86_64/bin/ExpansionHunter /usr/local/bin/ \
     && rm -rf ExpansionHunter-v${EXPANSIONHUNTER_VERSION}-linux_x86_64*
+
+# Install REViewer (for read visualization in STR analysis)
+ARG REVIEWER_VERSION=0.2.7
+RUN wget https://github.com/Illumina/REViewer/releases/download/v${REVIEWER_VERSION}/REViewer-v${REVIEWER_VERSION}-linux_x86_64.gz \
+    && gunzip REViewer-v${REVIEWER_VERSION}-linux_x86_64.gz \
+    && chmod +x REViewer-v${REVIEWER_VERSION}-linux_x86_64 \
+    && mv REViewer-v${REVIEWER_VERSION}-linux_x86_64 /usr/local/bin/REViewer
 
 # Clone STRipy-pipeline repository
 RUN git clone https://gitlab.com/andreassh/stripy-pipeline.git /opt/stripy-pipeline
@@ -29,17 +40,15 @@ WORKDIR /opt/stripy-pipeline
 # Install Python requirements if they exist
 RUN if [ -f requirements.txt ]; then pip3 install -r requirements.txt; fi
 
-# Create data and output directories
-RUN mkdir -p /data /output && chmod 755 /data /output
+# Copy wrapper script and loci profiles
+COPY scripts/stripy /usr/local/bin/stripy
+COPY scripts/catalogs /opt/stripy-pipeline/scripts/catalogs
 
-# Set working directory for user data
-WORKDIR /data
+# Make wrapper executable
+RUN chmod +x /usr/local/bin/stripy
 
-# Expose volumes
-VOLUME ["/data", "/output", "/references"]
-
-# Set entrypoint
-ENTRYPOINT ["python3", "/opt/stripy-pipeline/stri.py"]
+# Set entrypoint to use the wrapper
+ENTRYPOINT ["/usr/local/bin/stripy"]
 
 # Default help command
 CMD ["--help"]
