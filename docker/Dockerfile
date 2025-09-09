@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     samtools \
     libcurl4 \
     libssl3 \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Install ExpansionHunter (core dependency for STR analysis)
@@ -31,6 +32,16 @@ RUN wget https://github.com/Illumina/REViewer/releases/download/v${REVIEWER_VERS
     && chmod +x REViewer-v${REVIEWER_VERSION}-linux_x86_64 \
     && mv REViewer-v${REVIEWER_VERSION}-linux_x86_64 /usr/local/bin/REViewer
 
+# Install BWA aligner
+ARG BWA_VERSION=0.7.19
+RUN wget https://github.com/lh3/bwa/releases/download/v${BWA_VERSION}/bwa-${BWA_VERSION}.tar.bz2 \
+    && tar -xjf bwa-${BWA_VERSION}.tar.bz2 \
+    && cd bwa-${BWA_VERSION} \
+    && make \
+    && mv bwa /usr/local/bin/ \
+    && cd .. \
+    && rm -rf bwa-${BWA_VERSION}*
+
 # Clone STRipy-pipeline repository
 RUN git clone https://gitlab.com/andreassh/stripy-pipeline.git /opt/stripy-pipeline
 
@@ -40,8 +51,9 @@ WORKDIR /opt/stripy-pipeline
 # Install Python requirements if they exist
 RUN if [ -f requirements.txt ]; then pip3 install -r requirements.txt; fi
 
-# Copy wrapper script and loci profiles
+# Copy wrapper script, default config, and loci profiles
 COPY scripts/stripy /usr/local/bin/stripy
+COPY scripts/default-config.json /usr/local/bin/default-config.json
 COPY scripts/catalogs /opt/stripy-pipeline/scripts/catalogs
 
 # Make wrapper executable
