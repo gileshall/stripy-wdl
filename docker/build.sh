@@ -60,9 +60,6 @@ echo "Build args: $BUILD_ARGS"
 echo "Cache: $([ -n "$NO_CACHE" ] && echo "disabled" || echo "enabled")"
 echo ""
 
-# Create necessary directories
-mkdir -p data output references config
-
 # Check if requirements.txt exists
 if [ ! -f "requirements.txt" ]; then
     echo "Warning: requirements.txt not found. Creating a basic one..."

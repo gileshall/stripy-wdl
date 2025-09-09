@@ -89,3 +89,5 @@ The test harness:
 
 - The wrapper only modifies `--locus`; everything else is unchanged
 - Reference is kept compressed (`hg38.fa.gz`) as used by the WDL inputs
+
+
