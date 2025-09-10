@@ -1,6 +1,6 @@
 # Simple Dockerfile for STRipy-pipeline
 # Force x86_64 platform for compatibility with genomics tools
-FROM --platform=linux/amd64 ubuntu:22.04
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
@@ -34,13 +34,13 @@ RUN wget https://github.com/Illumina/REViewer/releases/download/v${REVIEWER_VERS
 
 # Install BWA aligner
 ARG BWA_VERSION=0.7.19
-RUN wget https://github.com/lh3/bwa/releases/download/v${BWA_VERSION}/bwa-${BWA_VERSION}.tar.bz2 \
-    && tar -xjf bwa-${BWA_VERSION}.tar.bz2 \
+RUN wget https://github.com/lh3/bwa/archive/refs/tags/v${BWA_VERSION}.tar.gz \
+    && tar -xzf v${BWA_VERSION}.tar.gz \
     && cd bwa-${BWA_VERSION} \
     && make \
     && mv bwa /usr/local/bin/ \
     && cd .. \
-    && rm -rf bwa-${BWA_VERSION}*
+    && rm -rf bwa-${BWA_VERSION}* v${BWA_VERSION}.tar.gz
 
 # Clone STRipy-pipeline repository
 RUN git clone https://gitlab.com/andreassh/stripy-pipeline.git /opt/stripy-pipeline

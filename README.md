@@ -1,93 +1,65 @@
-# STRipy Wrapper & WDL Pipeline
+# STRipy WDL pipeline
 
-A minimal wrapper around STRipy that expands `--locus` profile names (from `scripts/catalogs/loci_profiles.json`) into individual loci before invoking the original STRipy pipeline. Includes a WDL workflow and a Python-based test harness.
+WDL workflow to run STRipy for short tandem repeat (STR) genotyping. The WDL standardizes STRipy execution in containerized environments for clinical pipelines.
 
-## Features
+Upstream STRipy: [STRipy-pipeline on GitLab](https://gitlab.com/andreassh/stripy-pipeline).
 
-- Expands `--locus` profile names (e.g., `all_loci`, `neurological_disease`) into loci
-- No-op pass-through when `--locus` is absent
-- Docker image with wrapper on PATH as `stripy`
-- WDL workflow (`stripy-pipeline.wdl`) to run STRipy in Docker
-- Python test runner to validate two scenarios
+## What the workflow does
 
-## Quick Start
+- Executes STRipy (`stri.py`) with pinned versions of ExpansionHunter, REViewer, and BWA
+- Expands aliased groups of loci (e.g., cohorts or disease panels) into explicit loci
+- Generates a runtime specific [config.json](https://gitlab.com/andreassh/stripy-pipeline/-/blob/main/config.json?ref_type=heads) based on workflow inputs.
+- Collects TSV/JSON/HTML outputs
 
-### Build Docker image
+## Tools
 
-```bash
-./build.sh --tag stripy-pipeline:latest
-```
+- ExpansionHunter: STR genotyping
+- REViewer: read visualization
+- BWA: alignment utilities used by STRipy
+- Builtin STRipy wrapper
 
-### Run via WDL (miniwdl)
+All tools are installed in the Docker image and available on $PATH.
 
-Create an inputs JSON (example):
+## Key WDL inputs:
 
-```json
-{
-  "STRipyPipeline.input_bam": "NA12878/NA12878.final.cram",
-  "STRipyPipeline.input_bam_index": "NA12878/NA12878.final.cram.crai",
-  "STRipyPipeline.genome_build": "hg38",
-  "STRipyPipeline.reference_fasta": "references/hg38.fa.gz",
-  "STRipyPipeline.locus": "HTT,ATXN3,AFF2",
-  "STRipyPipeline.sex": "female",
-  "STRipyPipeline.analysis": "standard",
-  "STRipyPipeline.docker_image": "stripy-pipeline:latest",
-  "STRipyPipeline.memory_gb": 16,
-  "STRipyPipeline.cpu": 4
-}
-```
+- `input_bam` / `input_bam_index`: CRAM/BAM with matching CRAI/BAI
+- `reference_fasta`: Indexed reference (e.g., hg38)
+- `genome_build`: One of `hg38`, `hg19`, `hs1`
+- `locus`: Comma-separated loci or profile names (expanded by wrapper)
+- `analysis`: `standard` or `extended`
+- `output_json` (default true), `verbose` (default false)
 
-Run:
 
-```bash
-miniwdl run stripy-pipeline.wdl -i test-inputs.json -d test-outputs -v
-```
+## Layout
 
-Outputs appear under `test-outputs/.../call-RunSTRipy/out/`.
+- `docker/scripts/stripy` wrapper
+- `docker/scripts/default-config.json` base config
+- `docker/scripts/catalogs/` profiles
+- `docker/scripts/catalogs/loci_profiles.json` defines named sets.
+- `docker/Dockerfile` image
+- `wdl/stripy-pipeline.wdl` workflow (primary)
+- `wdl/test/test.sh` workflow test based on miniwdl
 
-### Wrapper behavior
+### Wrapper Details
 
-- Command exposed as `stripy` in the container
-- If `--locus` is present, profile names are expanded and deduplicated, then STRipy is executed as:
-  - `python3 /opt/stripy-pipeline/stri.py [args...]`
-- If `--locus` is not present, arguments are passed straight through
+The wrapper lives external to the WDL and is bundled in the Dockerimage.  It wraps the execution of [stri.py](https://gitlab.com/andreassh/stripy-pipeline/-/blob/main/stri.py?ref_type=heads).  Before the wrapper executes STRipy, it does the following:
 
-### Run test suite
+1. Expand and merge aliased loci into explicit loci
+2. Consume and convert extra command line options into a runtime specific config file that is based on the default config file shipped with STRipy.
 
-Requires `miniwdl` and Docker.
+## Quick start
+
+### Build image
 
 ```bash
-pip install miniwdl
-./test_wdl.py
+docker/build.sh --tag stripy-pipeline:latest
 ```
 
-The test harness:
-- Creates `test-env/` containing required inputs (CRAM/CRAI, hg38.fa.gz/fai)
-- Runs two cases:
-  1) `HTT,ATXN3,AFF2`
-  2) `all_loci`
-- Writes run folders under `test-env/test-outputs/`
+### Test the workflow with miniwdl
 
-## Locus profiles
-
-`scripts/catalogs/loci_profiles.json` contains named sets such as:
-- `all_loci`
-- `neurological_disease`
-- `childhood_onset`
-- `coding_region`
-- `utrs`
-
-## Repo layout
-
-- `scripts/stripy` wrapper entrypoint
-- `scripts/catalogs/` locus/profile catalogs
-- `stripy-pipeline.wdl` WDL workflow
-- `test_wdl.py` Python test harness
-- `Dockerfile` container build
-
-## Notes
-
-- The wrapper only modifies `--locus`; everything else is unchanged
-- Reference is kept compressed (`hg38.fa.gz`) as used by the WDL inputs
-
-
+```bash
+$ pip install miniwdl
+$ cd wdl/test
+$ ./download.sh
+$ ./test.sh
+```

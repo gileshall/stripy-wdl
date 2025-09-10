@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-DIR="$(dirname "$0")"
+DIR=$(dirname "$0")
 
 mkdir -p "$DIR/NA12878"
 mkdir -p "$DIR/hg38"
