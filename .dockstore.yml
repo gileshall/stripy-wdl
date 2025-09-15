@@ -1,0 +1,7 @@
+version: 1.2
+workflows:
+  - name: STRipyPipeline
+    subclass: WDL
+    primaryDescriptorPath: /wdl/stripy-pipeline.wdl
+    testParameterFiles:
+      - /wdl/test/test-inputs.json
