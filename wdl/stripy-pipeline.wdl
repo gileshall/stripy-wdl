@@ -14,7 +14,7 @@ workflow STRipyPipeline {
         File? config
         Boolean output_json = true
         Boolean verbose = false
-        String docker_image = "stripy-pipeline:latest"
+        String docker_image = "us-central1-docker.pkg.dev/broad-dsde-methods/stripy/stripy-pipeline:latest"
         Int memory_gb = 8
         Int cpu = 2
     }
