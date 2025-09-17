@@ -58,11 +58,16 @@ task RunSTRipy {
         Boolean output_json
         Boolean verbose
         String docker_image
-        Int memory_gb
         Int cpu
+        Int memory_gb
     }
-
+    
     String output_dir = "STRipy_output"
+
+    # Safety factor (you can adjust this as needed)
+    Float safety_factor = 1.5
+    Float input_size = size(input_bam) + size(input_bam_index) + size(reference_fasta)
+    Int provision_size_gb = ceil(input_size * safety_factor / 1e9)
 
     command {
         # Run STRipy pipeline using our wrapper
@@ -87,6 +92,7 @@ task RunSTRipy {
     }
 
     runtime {
+        disks: "local-disk ${provision_size_gb} SSD"
         docker: docker_image
         memory: "${memory_gb}G"
         cpu: cpu

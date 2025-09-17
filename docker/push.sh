@@ -46,6 +46,13 @@ if ! gcloud artifacts repositories describe "$REPOSITORY" \
     --project="$PROJECT_ID"
 fi
 
+gcloud artifacts repositories add-iam-policy-binding "$REPOSITORY" \
+  --location="$REGION" \
+  --project="$PROJECT_ID" \
+  --member=allUsers \
+  --role=roles/artifactregistry.reader \
+  --quiet >/dev/null 2>&1 || true
+
 docker push "$GCS_IMAGE_NAME"
 
 echo "Pushed: $GCS_IMAGE_NAME"

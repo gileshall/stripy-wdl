@@ -3,7 +3,7 @@
   "STRipyPipeline.input_bam_index": "NA12878/NA12878.final.cram.crai",
   "STRipyPipeline.genome_build": "hg38",
   "STRipyPipeline.reference_fasta": "hg38/hg38.fa",
-  "STRipyPipeline.locus": "ATXN8OS,DMD,COMP,ARX_2,GLS,ARX_1,ATXN3,FXN,CBL,NUTM2B-AS1,RUNX2,TCF4,TNRC6A,MARCHF6,CNBP,FGF14,HOXA13_2,HOXA13_3,ZIC2,AR,AFF2,HOXA13_1,SAMD12,PHOX2B,BEAN1,NOTCH2NLC,RAPGEF2,RILPL1,PPP2R2B,DMPK,PRDM12,FOXL2,RFC1,ATXN10,ATXN1,ATXN7,C9ORF72,TBP,DIP2B,JPH3,NIPA1,CACNA1A,PABPN1,SOX3,XYLT1,YEATS2,HTT,NOP56,ATXN2,HOXD13,TBX1,FMR1,GIPC1,STARD7,ATN1,LRP12,DAB1,ZIC3",
+  "STRipyPipeline.locus": "all_loci",
   "STRipyPipeline.sex": "female",
   "STRipyPipeline.analysis": "standard",
   "STRipyPipeline.verbose": true,
