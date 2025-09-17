@@ -67,7 +67,7 @@ task RunSTRipy {
     # Safety factor (you can adjust this as needed)
     Float safety_factor = 1.5
     Float input_size = size(input_bam) + size(input_bam_index) + size(reference_fasta)
-    Int provision_size_gb = ceil(input_size * safety_factor / 1e9)
+    Int provision_size_gb = ceil(input_size * safety_factor / (1024 * 1024 * 1024))
 
     command {
         # Run STRipy pipeline using our wrapper
