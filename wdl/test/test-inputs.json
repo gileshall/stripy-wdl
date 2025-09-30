@@ -7,10 +7,7 @@
   "STRipyPipeline.sex": "female",
   "STRipyPipeline.analysis": "extended",
   "STRipyPipeline.verbose": false,
-  "STRipyPipeline.output_json": true,
-  "STRipyPipeline.custom_catalog": null,
-  "STRipyPipeline.logflags": null,
-  "STRipyPipeline.config": null,
+  "STRipyPipeline.output_vcf": true,
   "STRipyPipeline.docker_image": "stripy-pipeline:latest",
   "STRipyPipeline.memory_gb": 16,
   "STRipyPipeline.cpu": 4

@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pysam
+from pyfaidx import Fasta
 
 def parse_coords(coord):
     m = re.match(r"(chr)?(?P<chrom>[^:]+):(?P<start>\d+)-(?P<end>\d+)", str(coord))
@@ -172,7 +173,7 @@ VCF_HEADER = {
 }
 
 
-def write_with_pysam(loci, out_path, sample_name):
+def write_with_pysam(loci, out_path, sample_name, contigs=None):
     header = pysam.VariantHeader()
 
     header.add_meta("source", value="STRipy2VCF")
@@ -185,10 +186,13 @@ def write_with_pysam(loci, out_path, sample_name):
         items = list(format.items())
         header.add_meta("FORMAT", items=items)
 
-    # Should we only use the mentioned chromosomes?
-    chrom_list = set(locus['chrom'] for locus in loci)
-    for chrom_name in chrom_list:
-        header.contigs.add(chrom_name)
+    if contigs is not None:
+        for name, length in contigs:
+            header.contigs.add(name, length=length)
+    else:
+        chrom_list = set(locus['chrom'] for locus in loci)
+        for chrom_name in chrom_list:
+            header.contigs.add(chrom_name)
 
     # This is a single sample tool
     header.add_sample(sample_name)
@@ -235,13 +239,19 @@ def main():
     ap.add_argument("--json", required=True, help="STRipy JSON report")
     ap.add_argument("-o", "--out", required=True, help="Output VCF (compressed and tabix indexed)")
     ap.add_argument("--sample-name", default=None, help="Sample name for VCF")
+    ap.add_argument("--reference", default=None, help="Optional reference fasta")
     args = ap.parse_args()
 
     if args.sample_name is None:
         args.sample_name = Path(args.out).stem
 
     loci = load_inputs(args.json)
-    write_with_pysam(loci, args.out, args.sample_name)
+    contigs = None
+    if args.reference:
+        reference = Fasta(args.reference, as_raw=True, read_ahead=1000000)
+        contigs = [(name, len(reference[name])) for name in reference.keys()]
+        reference.close()
+    write_with_pysam(loci, args.out, args.sample_name, contigs=contigs)
 
 if __name__ == "__main__":
     main()

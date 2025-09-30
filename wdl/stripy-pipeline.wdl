@@ -10,9 +10,8 @@ workflow STRipyPipeline {
         String? sex
         File? custom_catalog
         String analysis = "standard"
-        String? logflags
         File? config
-        Boolean output_json = true
+        Boolean output_vcf = true
         Boolean verbose = false
         String docker_image = "us-central1-docker.pkg.dev/broad-dsde-methods/stripy/stripy-pipeline:latest"
         Int memory_gb = 8
@@ -29,9 +28,8 @@ workflow STRipyPipeline {
             sex = sex,
             custom_catalog = custom_catalog,
             analysis = analysis,
-            logflags = logflags,
             config = config,
-            output_json = output_json,
+            output_vcf = output_vcf,
             verbose = verbose,
             docker_image = docker_image,
             memory_gb = memory_gb,
@@ -53,9 +51,8 @@ task RunSTRipy {
         String? sex
         File? custom_catalog
         String analysis
-        String? logflags
         File? config
-        Boolean output_json
+        Boolean output_vcf
         Boolean verbose
         String docker_image
         Int cpu
@@ -79,16 +76,16 @@ task RunSTRipy {
             --reference ${reference_fasta} \
             --output ${output_dir} \
             --analysis ${analysis} \
-            --output-json ${output_json} \
+            --output-json true \
             --output-tsv true \
             --output-html true \
+            --output-vcf ${output_vcf} \
             --verbose ${verbose} \
             --num-threads ${cpu} \
             ${if defined(config) then "--base-config " + config else ""} \
             ${if defined(locus) then "--locus " + locus else ""} \
             ${if defined(sex) then "--sex " + sex else ""} \
-            ${if defined(custom_catalog) then "--custom " + custom_catalog else ""} \
-            ${if defined(logflags) then "--logflags " + logflags else ""}
+            ${if defined(custom_catalog) then "--custom " + custom_catalog else ""}
     }
 
     runtime {

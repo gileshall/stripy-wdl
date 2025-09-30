@@ -46,6 +46,9 @@ The wrapper lives external to the WDL and is bundled in the Dockerimage.  It wra
 
 1. Expand and merge aliased loci into explicit loci
 2. Consume and convert extra command line options into a runtime specific config file that is based on the default config file shipped with STRipy.
+3. Validate custom loci BED file, if provided
+4. Execute STRipy
+5. Generate VCF from STRipy JSON output, if requested
 
 ## Quick start
 

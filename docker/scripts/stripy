@@ -122,6 +122,17 @@ def find_validator_script():
             return path
     return None
 
+def find_vcf_script():
+    possible_paths = [
+        "scripts/stripy_to_vcf.py",
+        "/opt/stripy-pipeline/scripts/stripy_to_vcf.py",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "stripy_to_vcf.py")
+    ]
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+    return None
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: stripy [STRipy arguments...]", file=sys.stderr)
@@ -131,6 +142,9 @@ def main():
     new_args = []
     locus_expanded = False
     custom_bed_path = None
+    output_vcf = None
+    output_dir = None
+    reference_fasta = None
     
     # Config options we handle
     config_options = {
@@ -173,6 +187,17 @@ def main():
             custom_bed_path = args[i + 1]
             new_args.extend([arg, custom_bed_path])
             i += 2
+        elif arg == "--output-vcf" and i + 1 < len(args):
+            output_vcf = args[i + 1].lower() == 'true'
+            i += 2
+        elif arg == "--output" and i + 1 < len(args):
+            output_dir = args[i + 1]
+            new_args.extend([arg, output_dir])
+            i += 2
+        elif arg == "--reference" and i + 1 < len(args):
+            reference_fasta = args[i + 1]
+            new_args.extend([arg, reference_fasta])
+            i += 2
         elif arg == "--locus" and i + 1 < len(args):
             # Found --locus, expand it
             profiles = load_locus_profiles()
@@ -214,8 +239,37 @@ def main():
                 print("Custom loci BED validation failed. Aborting.", file=sys.stderr)
                 sys.exit(result.returncode)
     
-    # Execute the actual STRipy command
-    os.execvp("python3", ["python3", "/opt/stripy-pipeline/stri.py"] + new_args)
+    if output_vcf:
+        # preflight
+        vcf_tool = find_vcf_script()
+        # execute STRipy
+        cmd = ["python3", "/opt/stripy-pipeline/stri.py"] + new_args
+        result = subprocess.run(cmd)
+        if result.returncode != 0:
+            sys.exit(result.returncode)
+        if not output_dir:
+            print("ERROR: --output is required when --output-vcf is true", file=sys.stderr)
+            sys.exit(1)
+        if not vcf_tool:
+            print("ERROR: Could not locate stripy_to_vcf.py script", file=sys.stderr)
+            sys.exit(1)
+        json_candidates = []
+        if os.path.isdir(output_dir):
+            for name in os.listdir(output_dir):
+                if name.lower().endswith('.json'):
+                    json_candidates.append(os.path.join(output_dir, name))
+        if not json_candidates:
+            print("ERROR: No JSON output found to convert to VCF", file=sys.stderr)
+            sys.exit(1)
+        json_path = sorted(json_candidates, key=lambda p: os.path.getsize(p), reverse=True)[0]
+        vcf_out = os.path.join(output_dir, "stripy.vcf")
+        vcf_cmd = ["python3", vcf_tool, "--json", json_path, "-o", vcf_out]
+        if reference_fasta:
+            vcf_cmd.extend(["--reference", reference_fasta])
+        vcf_res = subprocess.run(vcf_cmd)
+        sys.exit(vcf_res.returncode)
+    else:
+        os.execvp("python3", ["python3", "/opt/stripy-pipeline/stri.py"] + new_args)
 
 if __name__ == "__main__":
     main()
