@@ -79,23 +79,112 @@ def load_inputs(json_path):
     return loci
 
 
+VCF_HEADER = {
+    "INFO": [
+        {
+            "ID": "END",
+            "Number": "1",
+            "Type": "Integer",
+            "Description": "Stop position of the interval"
+        },
+        {
+            "ID": "SVTYPE",
+            "Number": "1",
+            "Type": "String",
+            "Description": "Type of structural variant"
+        },
+        {
+            "ID": "RU",
+            "Number": "1",
+            "Type": "String",
+            "Description": "Repeat unit in the reference orientation"
+        },
+        {
+            "ID": "PERIOD",
+            "Number": "1",
+            "Type": "Integer",
+            "Description": "Length of the repeat unit"
+        },
+        {
+            "ID": "DISEASES",
+            "Number": ".",
+            "Type": "String",
+            "Description": "Associated disease symbols for this locus (| separated)"
+        },
+        {
+            "ID": "LOCUS",
+            "Number": "1",
+            "Type": "String",
+            "Description": "Gene/locus identifier from STRipy"
+        },
+    ],
+    "FORMAT": [
+        {
+            "ID": "GT",
+            "Number": "1",
+            "Type": "String",
+            "Description": "Unphased genotype"
+        },
+        {
+            "ID": "REPCN",
+            "Number": "2",
+            "Type": "Float",
+            "Description": "Number of repeat units spanned by each allele"
+        },
+        {
+            "ID": "REPCI1",
+            "Number": "2",
+            "Type": "Integer",
+            "Description": "95% CI min,max on repeat counts of first allele"
+        },
+        {
+            "ID": "REPCI2",
+            "Number": "2",
+            "Type": "Integer",
+            "Description": "95% CI min,max on repeat counts of second allele"
+        },
+        {
+            "ID": "OUTLIER",
+            "Number": "2",
+            "Type": "Integer",
+            "Description": "Allelic population outlier flags (0/1) assigned by STRipy"
+        },
+        {
+            "ID": "ZSCORE",
+            "Number": "2",
+            "Type": "Float",
+            "Description": "Allelic population Z-scores assigned by STRipy"
+        },
+        {
+            "ID": "DP",
+            "Number": "1",
+            "Type": "Integer",
+            "Description": "Total Depth"
+        },
+        {
+            "ID": "STR_FILTER",
+            "Number": ".",
+            "Type": "String",
+            "Description": "Filter status assigned by STRipy"
+        },
+    ]
+
+}
+
+
 def write_with_pysam(loci, out_path, sample_name):
     header = pysam.VariantHeader()
 
     header.add_meta("source", value="STRipy2VCF")
-    header.add_meta("INFO", items=[("ID","END"), ("Number","1"), ("Type","Integer"), ("Description","Stop position of the interval")])
-    header.add_meta("INFO", items=[("ID","SVTYPE"), ("Number","1"), ("Type","String"), ("Description","Type of structural variant")])
-    header.add_meta("INFO", items=[("ID","RU"), ("Number","1"), ("Type","String"), ("Description","Repeat unit sequence (motif)")])
-    header.add_meta("INFO", items=[("ID","PERIOD"), ("Number","1"), ("Type","Integer"), ("Description","Length of the repeat unit")])
-    header.add_meta("INFO", items=[("ID","REPCN"), ("Number","2"), ("Type","Float"), ("Description","Allelic repeat counts (A1,A2) from STRipy")])
-    header.add_meta("INFO", items=[("ID","REPCI"), ("Number","2"), ("Type","String"), ("Description","Allelic 95% CI on repeat counts as min-max,min-max")])
-    header.add_meta("INFO", items=[("ID","OUTLIER"), ("Number","2"), ("Type","Integer"), ("Description","Allelic population outlier flags (0/1)")])
-    header.add_meta("INFO", items=[("ID","ZSCORE"), ("Number","2"), ("Type","Float"), ("Description","Allelic population Z-scores")])
-    header.add_meta("INFO", items=[("ID","DP"), ("Number","1"), ("Type","Integer"), ("Description","Depth (coverage) at locus, from STRipy")])
-    header.add_meta("INFO", items=[("ID","DISEASES"), ("Number","."), ("Type","String"), ("Description","Associated disease symbols for this locus (| separated)")])
-    header.add_meta("INFO", items=[("ID","LOCUS"), ("Number","1"), ("Type","String"), ("Description","Gene/locus identifier from STRipy")])
-    header.add_meta("FORMAT", items=[("ID","GT"), ("Number","1"), ("Type","String"), ("Description","Unphased genotype")])
-    header.add_meta("FORMAT", items=[("ID","AR"), ("Number","2"), ("Type","Integer"), ("Description","Allelic repeat counts (A1,A2) from STRipy")])
+    header.add_meta("ALT", items=[("ID", "STR"), ("Description", "Short tandem repeat")])
+    for info in VCF_HEADER["INFO"]:
+        items = list(info.items())
+        header.add_meta("INFO", items=items)
+
+    for format in VCF_HEADER["FORMAT"]:
+        items = list(format.items())
+        header.add_meta("FORMAT", items=items)
+
     # Should we only use the mentioned chromosomes?
     chrom_list = set(locus['chrom'] for locus in loci)
     for chrom_name in chrom_list:
@@ -118,15 +207,26 @@ def write_with_pysam(loci, out_path, sample_name):
             rec.info["RU"] = loc["motif"]
             if loc["period"]:
                 rec.info["PERIOD"] = int(loc["period"])
-        rec.info["REPCN"] = (loc["a1_rep"], loc["a2_rep"])
-        rec.info["REPCI"] = (loc["a1_ci"], loc["a2_ci"])
-        rec.info["OUTLIER"] = (loc["a1_out"], loc["a2_out"])
-        rec.info["ZSCORE"] = (loc["a1_z"], loc["a2_z"])
-        rec.info["DP"] = loc["coverage"]
         rec.info["DISEASES"] = loc["diseases"]
         rec.info["LOCUS"] = loc["id"]
         rec.samples[sample_name]["GT"] = (0, 0)
-        rec.samples[sample_name]["AR"] = (loc["a1_rep"], loc["a2_rep"])
+        rec.samples[sample_name]["REPCN"] = (loc["a1_rep"], loc["a2_rep"])
+        def parse_ci_tuple(ci_s):
+            m = re.match(r"^\s*([+-]?[0-9]+(?:\.[0-9]+)?)\s*-\s*([+-]?[0-9]+(?:\.[0-9]+)?)\s*$", str(ci_s))
+            if not m:
+                return (0, 0)
+            a = int(float(m.group(1)))
+            b = int(float(m.group(2)))
+            return (a, b)
+        rec.samples[sample_name]["REPCI1"] = parse_ci_tuple(loc["a1_ci"])
+        rec.samples[sample_name]["REPCI2"] = parse_ci_tuple(loc["a2_ci"])
+        rec.samples[sample_name]["OUTLIER"] = (int(loc["a1_out"]), int(loc["a2_out"]))
+        rec.samples[sample_name]["ZSCORE"] = (loc["a1_z"], loc["a2_z"]) 
+        rec.samples[sample_name]["DP"] = int(loc["coverage"]) 
+        if loc["filter"]:
+            rec.samples[sample_name]["STR_FILTER"] = [str(loc["filter"])]
+        else:
+            rec.samples[sample_name]["STR_FILTER"] = ["PASS"]
         vf.write(rec)
     vf.close()
 
