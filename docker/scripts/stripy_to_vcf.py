@@ -213,7 +213,7 @@ def write_with_pysam(loci, out_path, sample_name, contigs=None):
                 rec.info["PERIOD"] = int(loc["period"])
         rec.info["DISEASES"] = loc["diseases"]
         rec.info["LOCUS"] = loc["id"]
-        rec.samples[sample_name]["GT"] = (0, 0)
+        rec.samples[sample_name]["GT"] = ('.', '.')
         rec.samples[sample_name]["REPCN"] = (loc["a1_rep"], loc["a2_rep"])
         def parse_ci_tuple(ci_s):
             m = re.match(r"^\s*([+-]?[0-9]+(?:\.[0-9]+)?)\s*-\s*([+-]?[0-9]+(?:\.[0-9]+)?)\s*$", str(ci_s))
