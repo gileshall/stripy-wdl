@@ -6,6 +6,7 @@ workflow STRipyPipeline {
         File input_bam_index
         String genome_build = "hg38"
         File reference_fasta
+        String? sample_name
         String? locus
         String? sex
         File? custom_catalog
@@ -24,6 +25,7 @@ workflow STRipyPipeline {
             input_bam_index = input_bam_index,
             genome_build = genome_build,
             reference_fasta = reference_fasta,
+            sample_name = sample_name,
             locus = locus,
             sex = sex,
             custom_catalog = custom_catalog,
@@ -38,6 +40,10 @@ workflow STRipyPipeline {
 
     output {
         Array[File] output_files = RunSTRipy.output_files
+        File json_output = RunSTRipy.json_output
+        File tsv_output = RunSTRipy.tsv_output
+        File html_output = RunSTRipy.html_output
+        File? vcf_output = RunSTRipy.vcf_output
     }
 }
 
@@ -47,6 +53,7 @@ task RunSTRipy {
         File input_bam_index
         String genome_build
         File reference_fasta
+        String? sample_name
         String? locus
         String? sex
         File? custom_catalog
@@ -66,27 +73,54 @@ task RunSTRipy {
     Float input_size = size(input_bam) + size(input_bam_index) + size(reference_fasta)
     Int provision_size_gb = ceil(input_size * safety_factor / (1024 * 1024 * 1024))
 
-    command {
+    String bam_filename = basename(input_bam)
+    String bam_base_default = sub(bam_filename, "\\\.[^.]+$", "")
+    String sample_basename = select_first([sample_name, bam_base_default])
+
+    String json_path = output_dir + "/" + sample_basename + ".json"
+    String tsv_path = output_dir + "/" + sample_basename + ".tsv"
+    String html_path = output_dir + "/" + sample_basename + ".html"
+    String vcf_path = output_dir + "/" + sample_basename + ".vcf"
+
+    command <<<
         # Run STRipy pipeline using our wrapper
-        mkdir -p ${output_dir}
+        mkdir -p ~{output_dir}
 
         stripy \
-            --input ${input_bam} \
-            --genome ${genome_build} \
-            --reference ${reference_fasta} \
-            --output ${output_dir} \
-            --analysis ${analysis} \
+            --input ~{input_bam} \
+            --genome ~{genome_build} \
+            --reference ~{reference_fasta} \
+            --output ~{output_dir} \
+            --analysis ~{analysis} \
             --output-json true \
             --output-tsv true \
             --output-html true \
-            --output-vcf ${output_vcf} \
-            --verbose ${verbose} \
-            --num-threads ${cpu} \
-            ${if defined(config) then "--base-config " + config else ""} \
-            ${if defined(locus) then "--locus " + locus else ""} \
-            ${if defined(sex) then "--sex " + sex else ""} \
-            ${if defined(custom_catalog) then "--custom " + custom_catalog else ""}
-    }
+            --output-vcf ~{output_vcf} \
+            --verbose ~{verbose} \
+            --num-threads ~{cpu} \
+            ~{if defined(config) then "--base-config " + config else ""} \
+            ~{if defined(locus) then "--locus " + locus else ""} \
+            ~{if defined(sex) then "--sex " + sex else ""} \
+            ~{if defined(custom_catalog) then "--custom " + custom_catalog else ""}
+
+        ACTUAL_FILE_NAME=$(basename "~{input_bam}")
+        ACTUAL_BASE=$(echo "${ACTUAL_FILE_NAME}" | sed 's/\.[^.]*$//')
+        TARGET_BASE='~{sample_basename}'
+        if [ "${TARGET_BASE}" != "${ACTUAL_BASE}" ]; then
+            if [ -f "~{output_dir}/${ACTUAL_BASE}.json" ]; then
+                mv "~{output_dir}/${ACTUAL_BASE}.json" "~{output_dir}/${TARGET_BASE}.json"
+            fi
+            if [ -f "~{output_dir}/${ACTUAL_BASE}.tsv" ]; then
+                mv "~{output_dir}/${ACTUAL_BASE}.tsv" "~{output_dir}/${TARGET_BASE}.tsv"
+            fi
+            if [ -f "~{output_dir}/${ACTUAL_BASE}.html" ]; then
+                mv "~{output_dir}/${ACTUAL_BASE}.html" "~{output_dir}/${TARGET_BASE}.html"
+            fi
+            if [ -f "~{output_dir}/${ACTUAL_BASE}.vcf" ]; then
+                mv "~{output_dir}/${ACTUAL_BASE}.vcf" "~{output_dir}/${TARGET_BASE}.vcf"
+            fi
+        fi
+    >>>
 
     runtime {
         disks: "local-disk ${provision_size_gb} SSD"
@@ -98,5 +132,9 @@ task RunSTRipy {
 
     output {
         Array[File] output_files = glob("${output_dir}/*")
+        File json_output = json_path
+        File tsv_output = tsv_path
+        File html_output = html_path
+        File? vcf_output = vcf_path
     }
 }
